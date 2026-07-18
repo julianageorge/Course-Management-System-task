@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cms-postgres
+    environment:
+      POSTGRES_DB: cmsdb
+      POSTGRES_USER: cmsuser
+      POSTGRES_PASSWORD: cmspassword
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cmsuser -d cmsdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - cms_postgres_data:/var/lib/postgresql/data
+
+  admin-service:
+    build:
+      context: ./admin
+    container_name: cms-admin-service
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/cmsdb
+      SPRING_DATASOURCE_USERNAME: cmsuser
+      SPRING_DATASOURCE_PASSWORD: cmspassword
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8081:8081"
+
+  public-service:
+    build:
+      context: ./public
+    container_name: cms-public-service
+    depends_on:
+      db:
+        condition: service_healthy
+      admin-service:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/cmsdb
+      SPRING_DATASOURCE_USERNAME: cmsuser
+      SPRING_DATASOURCE_PASSWORD: cmspassword
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8082:8082"
+
+volumes:
+  cms_postgres_data:

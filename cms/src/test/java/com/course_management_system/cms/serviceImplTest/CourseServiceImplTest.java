@@ -1,29 +1,30 @@
 package com.course_management_system.cms.serviceImplTest;
 
-import java.util.List;
-import java.util.Optional;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.course_management_system.cms.dto.CourseRequest;
+import com.course_management_system.cms.dto.CourseResponse;
+import com.course_management_system.cms.entity.Course;
 import com.course_management_system.cms.entity.Instructor;
 import com.course_management_system.cms.exceptions.ResourceNotFoundException;
 import com.course_management_system.cms.repository.CourseRepository;
 import com.course_management_system.cms.repository.InstructorRepository;
 import com.course_management_system.cms.serviceImpl.CourseServiceImpl;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.course_management_system.cms.dto.CourseRequest;
-import com.course_management_system.cms.dto.CourseResponse;
-import com.course_management_system.cms.entity.Course;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.ArgumentMatchers.any;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 
 @ExtendWith(MockitoExtension.class)
 class CourseServiceImplTest {
@@ -35,17 +36,22 @@ class CourseServiceImplTest {
 
     private CourseServiceImpl courseService;
     private Instructor instructor;
+    private LocalDateTime registrationStart;
+    private LocalDateTime registrationEnd;
 
     @BeforeEach
     void setUp() {
         courseService = new CourseServiceImpl(courseRepository, instructorRepository);
-        instructor = new Instructor(1L, "Juliana", "juli@example.com", "Java");
+        instructor = new Instructor(1L, "Juliana", "juli@gmail.com", "Java");
+        registrationStart = LocalDateTime.now().minusDays(1);
+        registrationEnd = LocalDateTime.now().plusDays(7);
     }
 
     @Test
-    void createSavesCourseWithInstructor() {
+    void createSavesCourseWithInstructorAndRegistrationWindow() {
         CourseRequest request = courseRequest();
-        Course savedCourse = new Course(10L, "Spring Boot", "Build REST APIs", 20, false, instructor);
+        Course savedCourse = new Course(10L, "Spring Boot", "Build REST APIs", 20, false,
+                registrationStart, registrationEnd, instructor);
 
         when(instructorRepository.findById(1L)).thenReturn(Optional.of(instructor));
         when(courseRepository.save(any(Course.class))).thenReturn(savedCourse);
@@ -55,6 +61,8 @@ class CourseServiceImplTest {
         assertEquals(10L, response.getId());
         assertEquals("Spring Boot", response.getTitle());
         assertEquals(1L, response.getInstructorId());
+        assertEquals(registrationStart, response.getRegistrationStart());
+        assertEquals(registrationEnd, response.getRegistrationEnd());
         verify(courseRepository).save(any(Course.class));
     }
 
@@ -97,6 +105,8 @@ class CourseServiceImplTest {
         request.setDescription("Build REST APIs");
         request.setDurationHours(20);
         request.setInstructorId(1L);
+        request.setRegistrationStart(registrationStart);
+        request.setRegistrationEnd(registrationEnd);
         return request;
     }
 }
